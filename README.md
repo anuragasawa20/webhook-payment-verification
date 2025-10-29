@@ -72,19 +72,39 @@ Server will start on `http://localhost:3000`
 
 ## How to Test the Webhook Endpoint
 
-### Using the test script
+### Method 1: Generate Test via API (Easiest) ⭐
+```bash
+# Step 1: Generate signature and curl command
+curl http://localhost:3000/webhooks/generate-test
+
+# Step 2: Copy the "curl" field from response and run it
+# The response contains ready-to-use curl command with valid signature
+```
+
+**Using in Browser:**
+1. Visit: `http://localhost:3000/webhooks/generate-test`
+2. Copy the `curl` command from the response
+3. Paste in terminal and press Enter
+
+**Custom base URL:**
+```bash
+curl "http://localhost:3000/webhooks/generate-test?baseUrl=https://your-domain.com"
+```
+
+### Method 2: Using the test script
 ```bash
 node test-signature-generator.js
 ```
 
-### Manual testing with curl
+### Method 3: Manual testing with curl
 ```bash
-curl -X POST http://localhost:3000/api/webhook \
+curl -X POST http://localhost:3000/webhooks/payment \
   -H "Content-Type: application/json" \
   -H "X-Webhook-Signature: <generated-signature>" \
+  -H "X-Webhook-Timestamp: <timestamp>" \
   -d '{
     "event_id": "evt_123",
-    "event_type": "payment.completed",
+    "event_type": "transaction.completed",
     "timestamp": "2024-01-15T10:30:00Z",
     "data": {
       "transaction_id": "txn_456",
@@ -108,8 +128,14 @@ curl -X POST http://localhost:3000/api/webhook \
 
 ### Health check
 ```bash
-curl http://localhost:3000/health
+curl http://localhost:3000/webhooks/health
 ```
+
+### Results 
+
+![Result of first time transaction process](image-1.png)
+![Checking the Idempotency](image.png)
+
 
 ## Environment Variables
 
@@ -169,13 +195,24 @@ npm run migration:generate -- src/migrations/MigrationName
 
 ## API Endpoints
 
-### POST /api/webhook
+### POST /webhooks/payment
 Process incoming webhook events
-- **Headers**: `X-Webhook-Signature` (required)
+- **Headers**: 
+  - `X-Webhook-Signature` (required) - HMAC SHA256 signature
+  - `X-Webhook-Timestamp` (required) - Unix timestamp
+  - `Content-Type: application/json`
 - **Body**: JSON payload with transaction data
+- **Response**: Transaction details with processing fees
 
-### GET /health
+### GET /webhooks/generate-test
+Generate test signature and curl command
+- **Query Params**: 
+  - `baseUrl` (optional) - Base URL for curl command (default: http://localhost:3000)
+- **Response**: Ready-to-use curl command with valid signature
+
+### GET /webhooks/health
 Health check endpoint
+- **Response**: Status and timestamp
 
 ## Project Structure
 ```
